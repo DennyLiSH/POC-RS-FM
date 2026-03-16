@@ -8,34 +8,31 @@ import {
 import type { FileEntry } from '@/types/file';
 import {
   FolderPlus,
-  FilePlus,
   Pencil,
   Trash2,
   Copy,
-  Star,
+  FolderOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface TreeNodeContextMenuProps {
+interface FileBrowserContextMenuProps {
   entry: FileEntry;
   children: React.ReactNode;
   onRefresh: () => void;
   onRename: () => void;
   onDelete: () => void;
   onNewFolder: () => void;
-  onNewFile: () => void;
-  onAddBookmark: () => void;
+  onOpenFolder?: () => void;
 }
 
-export function TreeNodeContextMenu({
+export function FileBrowserContextMenu({
   entry,
   children,
   onRename,
   onDelete,
   onNewFolder,
-  onNewFile,
-  onAddBookmark,
-}: TreeNodeContextMenuProps) {
+  onOpenFolder,
+}: FileBrowserContextMenuProps) {
   const handleCopyPath = async () => {
     try {
       await navigator.clipboard.writeText(entry.path);
@@ -49,19 +46,20 @@ export function TreeNodeContextMenu({
     <ContextMenu>
       <ContextMenuTrigger>{children}</ContextMenuTrigger>
       <ContextMenuContent className="w-48">
+        {entry.is_dir && onOpenFolder && (
+          <>
+            <ContextMenuItem onClick={onOpenFolder}>
+              <FolderOpen className="w-4 h-4 mr-2" />
+              打开文件夹
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        )}
         {entry.is_dir && (
           <>
             <ContextMenuItem onClick={onNewFolder}>
               <FolderPlus className="w-4 h-4 mr-2" />
               新建文件夹
-            </ContextMenuItem>
-            <ContextMenuItem onClick={onNewFile}>
-              <FilePlus className="w-4 h-4 mr-2" />
-              新建文件
-            </ContextMenuItem>
-            <ContextMenuItem onClick={onAddBookmark}>
-              <Star className="w-4 h-4 mr-2" />
-              添加到收藏
             </ContextMenuItem>
             <ContextMenuSeparator />
           </>

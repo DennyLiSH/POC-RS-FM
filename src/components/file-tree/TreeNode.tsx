@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { TreeNodeContextMenu } from './TreeNodeContextMenu';
 import {
   NewFolderDialog,
+  NewFileDialog,
   RenameDialog,
   DeleteConfirmDialog,
 } from '@/components/dialogs';
@@ -27,6 +28,9 @@ export function TreeNode({ entry, depth }: TreeNodeProps) {
     loadNodeChildren,
     refreshNode,
     loadRootEntries,
+    setBrowsePath,
+    loadFilePreview,
+    clearPreview,
   } = useFileTreeStore();
 
   const { addBookmark } = useBookmarkStore();
@@ -39,6 +43,7 @@ export function TreeNode({ entry, depth }: TreeNodeProps) {
 
   // Dialog states
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const [showNewFileDialog, setShowNewFileDialog] = useState(false);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -55,6 +60,13 @@ export function TreeNode({ entry, depth }: TreeNodeProps) {
 
     if (entry.is_dir) {
       toggleNode(entry.path);
+      // Sync browse path when clicking on a folder
+      setBrowsePath(entry.path);
+      // Clear preview when selecting a folder
+      clearPreview();
+    } else {
+      // Load file preview when selecting a file
+      loadFilePreview(entry);
     }
   };
 
@@ -118,6 +130,7 @@ export function TreeNode({ entry, depth }: TreeNodeProps) {
         onRename={() => setShowRenameDialog(true)}
         onDelete={() => setShowDeleteDialog(true)}
         onNewFolder={() => setShowNewFolderDialog(true)}
+        onNewFile={() => setShowNewFileDialog(true)}
         onAddBookmark={handleAddBookmark}
       >
         {nodeContent}
@@ -142,6 +155,12 @@ export function TreeNode({ entry, depth }: TreeNodeProps) {
       <NewFolderDialog
         open={showNewFolderDialog}
         onOpenChange={setShowNewFolderDialog}
+        parentPath={entry.path}
+        onSuccess={handleRefresh}
+      />
+      <NewFileDialog
+        open={showNewFileDialog}
+        onOpenChange={setShowNewFileDialog}
         parentPath={entry.path}
         onSuccess={handleRefresh}
       />

@@ -138,6 +138,34 @@ pub fn copy_file(source: String, dest: String) -> Result<()> {
 }
 
 #[tauri::command]
+pub fn read_file_content(path: String) -> Result<String> {
+    let file_path = Path::new(&path);
+
+    if !file_path.exists() {
+        return Err(FileExplorerError::PathNotFound(path));
+    }
+
+    if file_path.is_dir() {
+        return Err(FileExplorerError::InvalidPath("Cannot read directory".to_string()));
+    }
+
+    let content = fs::read_to_string(file_path)?;
+    Ok(content)
+}
+
+#[tauri::command]
+pub fn create_file(path: String) -> Result<()> {
+    let file_path = Path::new(&path);
+
+    if file_path.exists() {
+        return Err(FileExplorerError::AlreadyExists(path));
+    }
+
+    fs::File::create(file_path)?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn search_files(directory: String, query: String) -> Result<Vec<FileEntry>> {
     let dir_path = Path::new(&directory);
 

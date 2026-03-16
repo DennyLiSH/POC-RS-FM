@@ -15,6 +15,18 @@ interface FileTreeState {
   isLoading: boolean;
   error: string | null;
 
+  // Browse state
+  currentBrowsePath: string | null;
+  browseEntries: FileEntry[];
+  browseHistory: string[];
+  isLoadingBrowse: boolean;
+
+  // Preview state
+  previewFile: FileEntry | null;
+  previewContent: string;
+  isLoadingPreview: boolean;
+  previewError: string | null;
+
   // Actions
   setRootPath: (path: string | null) => void;
   setExpanded: (path: string, expanded: boolean) => void;
@@ -26,6 +38,16 @@ interface FileTreeState {
   search: (query: string) => Promise<void>;
   refreshNode: (path: string) => Promise<void>;
   clearError: () => void;
+
+  // Browse actions
+  setBrowsePath: (path: string) => Promise<void>;
+  goBack: () => void;
+  goToParent: () => Promise<void>;
+  refreshBrowse: () => Promise<void>;
+
+  // Preview actions
+  loadFilePreview: (entry: FileEntry) => Promise<void>;
+  clearPreview: () => void;
 }
 
 export const useFileTreeStore = create<FileTreeState>((set, get) => ({
@@ -40,6 +62,18 @@ export const useFileTreeStore = create<FileTreeState>((set, get) => ({
   isSearching: false,
   isLoading: false,
   error: null,
+
+  // Browse initial state
+  currentBrowsePath: null,
+  browseEntries: [],
+  browseHistory: [],
+  isLoadingBrowse: false,
+
+  // Preview initial state
+  previewFile: null,
+  previewContent: '',
+  isLoadingPreview: false,
+  previewError: null,
 
   // Actions
   setRootPath: (path) => set({ rootPath: path }),
@@ -157,4 +191,97 @@ export const useFileTreeStore = create<FileTreeState>((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  // Browse actions
+  setBrowsePath: async (path) => {
+    const { currentBrowsePath, browseHistory } = get();
+
+    // Add current path to history if it exists and is different
+    const newHistory = currentBrowsePath && currentBrowsePath !== path
+      ? [...browseHistory, currentBrowsePath]
+      : browseHistory;
+
+    set({ isLoadingBrowse: true, currentBrowsePath: path, browseHistory: newHistory });
+
+    try {
+      const entries = await fileService.getDirectoryEntries(path);
+      set({ browseEntries: entries, isLoadingBrowse: false });
+    } catch (err) {
+      set({ browseEntries: [], isLoadingBrowse: false, error: String(err) });
+    }
+  },
+
+  goBack: () => {
+    const { browseHistory } = get();
+    if (browseHistory.length === 0) return;
+
+    const previousPath = browseHistory[browseHistory.length - 1];
+    const newHistory = browseHistory.slice(0, -1);
+
+    set({
+      currentBrowsePath: previousPath,
+      browseHistory: newHistory,
+    });
+
+    // Load entries for previous path
+    get().setBrowsePath(previousPath);
+  },
+
+  goToParent: async () => {
+    const { currentBrowsePath } = get();
+    if (!currentBrowsePath) return;
+
+    // Get parent path
+    const parts = currentBrowsePath.split(/[\\/]/);
+    parts.pop();
+    const parentPath = parts.join(currentBrowsePath.includes('\\') ? '\\' : '/');
+
+    if (!parentPath) return;
+
+    await get().setBrowsePath(parentPath);
+  },
+
+  refreshBrowse: async () => {
+    const { currentBrowsePath } = get();
+    if (!currentBrowsePath) return;
+
+    set({ isLoadingBrowse: true });
+    try {
+      const entries = await fileService.getDirectoryEntries(currentBrowsePath);
+      set({ browseEntries: entries, isLoadingBrowse: false });
+    } catch (err) {
+      set({ browseEntries: [], isLoadingBrowse: false, error: String(err) });
+    }
+  },
+
+  // Preview actions
+  loadFilePreview: async (entry) => {
+    const ext = entry.extension?.toLowerCase();
+
+    // Only support txt files for now
+    if (ext !== 'txt') {
+      set({
+        previewFile: entry,
+        previewContent: '',
+        previewError: '暂不支持此文件类型预览',
+        isLoadingPreview: false,
+      });
+      return;
+    }
+
+    set({ previewFile: entry, isLoadingPreview: true, previewError: null });
+
+    try {
+      const content = await fileService.readFileContent(entry.path);
+      set({ previewContent: content, isLoadingPreview: false });
+    } catch (err) {
+      set({ previewContent: '', isLoadingPreview: false, previewError: String(err) });
+    }
+  },
+
+  clearPreview: () => set({
+    previewFile: null,
+    previewContent: '',
+    previewError: null,
+  }),
 }));

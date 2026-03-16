@@ -48,4 +48,12 @@ export const fileService = {
     }
     return path;
   },
+
+  async readFileContent(path: string): Promise<string> {
+    return invoke('read_file_content', { path });
+  },
+
+  async createFile(path: string): Promise<void> {
+    return invoke('create_file', { path });
+  },
 };

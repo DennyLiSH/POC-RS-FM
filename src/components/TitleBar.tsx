@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Minus, Square, X } from 'lucide-react';
+import { Minus, Square, X, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SettingsDialog } from '@/components/settings';
 
 export function TitleBar() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   const handleMinimize = () => {
     getCurrentWindow().minimize();
   };
@@ -20,12 +24,25 @@ export function TitleBar() {
       data-tauri-drag-region
       className="flex items-center justify-between h-8 bg-background border-b select-none"
     >
-      {/* App Title */}
-      <div className="flex items-center px-3">
-        <span className="text-sm font-medium">Test_FM</span>
+      {/* Left: Title + Settings */}
+      <div className="flex items-center">
+        <div className="flex items-center px-3">
+          <span className="text-sm font-medium">Test_FM</span>
+        </div>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className={cn(
+            "flex items-center gap-1 px-2 py-1 rounded text-sm",
+            "hover:bg-muted transition-colors"
+          )}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>设置</span>
+        </button>
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       </div>
 
-      {/* Window Controls */}
+      {/* Right: Window Controls */}
       <div className="flex items-center">
         <button
           onClick={handleMinimize}
