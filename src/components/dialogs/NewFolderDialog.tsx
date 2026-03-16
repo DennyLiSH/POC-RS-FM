@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { fileService } from '@/services/fileService';
 import { toast } from 'sonner';
-import path from 'path';
 
 interface NewFolderDialogProps {
   open: boolean;

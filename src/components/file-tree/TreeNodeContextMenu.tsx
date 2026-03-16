@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -6,14 +5,12 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-import { fileService } from '@/services/fileService';
 import type { FileEntry } from '@/types/file';
 import {
   FolderPlus,
   Pencil,
   Trash2,
   Copy,
-  FolderOpen,
   Star,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -31,7 +28,6 @@ interface TreeNodeContextMenuProps {
 export function TreeNodeContextMenu({
   entry,
   children,
-  onRefresh,
   onRename,
   onDelete,
   onNewFolder,
