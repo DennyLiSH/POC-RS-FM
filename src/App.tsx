@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { FileTree } from '@/components/file-tree';
 import { SearchBar } from '@/components/search/SearchBar';
 import { TitleBar } from '@/components/TitleBar';
@@ -10,8 +10,13 @@ import { Star } from 'lucide-react';
 
 function App() {
   const { setRootPath, loadRootEntries } = useFileTreeStore();
+  const initRef = useRef(false);
 
   useEffect(() => {
+    // Prevent double execution in React StrictMode
+    if (initRef.current) return;
+    initRef.current = true;
+
     // Prompt user to select a folder on startup
     const initFolder = async () => {
       const path = await fileService.selectAndGrantDirectory();
