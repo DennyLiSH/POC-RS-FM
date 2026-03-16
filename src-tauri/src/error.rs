@@ -9,6 +9,7 @@ pub enum FileExplorerError {
     AlreadyExists(String),
     NotEmpty(String),
     Unknown(String),
+    ConfigError(String),
 }
 
 pub type Result<T> = std::result::Result<T, FileExplorerError>;
@@ -34,6 +35,7 @@ impl std::fmt::Display for FileExplorerError {
             FileExplorerError::AlreadyExists(msg) => write!(f, "Already exists: {}", msg),
             FileExplorerError::NotEmpty(msg) => write!(f, "Directory not empty: {}", msg),
             FileExplorerError::Unknown(msg) => write!(f, "Unknown error: {}", msg),
+            FileExplorerError::ConfigError(msg) => write!(f, "Config error: {}", msg),
         }
     }
 }

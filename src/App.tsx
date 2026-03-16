@@ -8,12 +8,19 @@ import { TitleBar } from '@/components/TitleBar';
 import { BookmarkList } from '@/components/bookmarks';
 import { ResizablePanel } from '@/components/ui/resizable-panel';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
+import { useSettingsStore } from '@/stores/settingsStore';
+import { useBookmarkStore } from '@/stores/bookmarkStore';
+import { useChatStore } from '@/stores/chatStore';
 import { fileService } from '@/services/fileService';
+import { detectLegacyData, executeMigration } from '@/utils/migration';
 import { Toaster } from '@/components/ui/sonner';
 import { Star, FolderTree, MessageSquare } from 'lucide-react';
 
 function App() {
   const { setRootPath, loadRootEntries } = useFileTreeStore();
+  const { initialize: initSettings } = useSettingsStore();
+  const { initialize: initBookmarks } = useBookmarkStore();
+  const { initialize: initChat } = useChatStore();
   const initRef = useRef(false);
 
   useEffect(() => {
@@ -21,16 +28,27 @@ function App() {
     if (initRef.current) return;
     initRef.current = true;
 
-    // Prompt user to select a folder on startup
-    const initFolder = async () => {
+    const initializeApp = async () => {
+      // 1. Check and migrate legacy data
+      const legacyData = detectLegacyData();
+      if (legacyData) {
+        console.log('Detected legacy data, migrating...');
+        await executeMigration(legacyData);
+      }
+
+      // 2. Initialize all stores (load from backend)
+      await Promise.all([initSettings(), initBookmarks(), initChat()]);
+
+      // 3. Prompt user to select a folder
       const path = await fileService.selectAndGrantDirectory();
       if (path) {
         setRootPath(path);
         loadRootEntries();
       }
     };
-    initFolder();
-  }, [setRootPath, loadRootEntries]);
+
+    initializeApp();
+  }, [setRootPath, loadRootEntries, initSettings, initBookmarks, initChat]);
 
   return (
     <div className="flex flex-col h-screen bg-background">

@@ -1,44 +1,55 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-}
+import { configService, ChatMessage } from '@/services/configService';
 
 interface ChatState {
   messages: ChatMessage[];
   isLoading: boolean;
+  isSending: boolean;
+  isInitialized: boolean;
 
-  addMessage: (role: 'user' | 'assistant', content: string) => void;
-  clearMessages: () => void;
-  setLoading: (loading: boolean) => void;
+  initialize: () => Promise<void>;
+  addMessage: (role: 'user' | 'assistant', content: string) => Promise<void>;
+  clearMessages: () => Promise<void>;
+  setSending: (sending: boolean) => void;
 }
 
-export const useChatStore = create<ChatState>()(
-  persist(
-    (set, get) => ({
-      messages: [],
-      isLoading: false,
+export const useChatStore = create<ChatState>()((set) => ({
+  messages: [],
+  isLoading: true,
+  isSending: false,
+  isInitialized: false,
 
-      addMessage: (role, content) => {
-        const newMessage: ChatMessage = {
-          id: crypto.randomUUID(),
-          role,
-          content,
-          timestamp: Date.now(),
-        };
-        set({ messages: [...get().messages, newMessage] });
-      },
-
-      clearMessages: () => set({ messages: [] }),
-
-      setLoading: (loading) => set({ isLoading: loading }),
-    }),
-    {
-      name: 'test-fm-chat',
+  initialize: async () => {
+    try {
+      const messages = await configService.getChatMessages();
+      set({
+        messages,
+        isLoading: false,
+        isInitialized: true,
+      });
+    } catch (error) {
+      console.error('Failed to load chat messages:', error);
+      set({ isLoading: false, isInitialized: true });
     }
-  )
-);
+  },
+
+  addMessage: async (role, content) => {
+    try {
+      const message = await configService.addChatMessage(role, content);
+      set((state) => ({ messages: [...state.messages, message] }));
+    } catch (error) {
+      console.error('Failed to add message:', error);
+    }
+  },
+
+  clearMessages: async () => {
+    try {
+      await configService.clearChatMessages();
+      set({ messages: [] });
+    } catch (error) {
+      console.error('Failed to clear messages:', error);
+    }
+  },
+
+  setSending: (sending) => set({ isSending: sending }),
+}));

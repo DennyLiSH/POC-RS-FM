@@ -1,58 +1,112 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-export type Theme = 'light' | 'dark' | 'system';
-export type Language = 'zh-CN' | 'en-US';
+import { configService, Theme, Language, Settings } from '@/services/configService';
 
 interface SettingsState {
-  // 全局设置
+  // State
   theme: Theme;
   language: Language;
   showHiddenFiles: boolean;
   personalIntro: string;
-
-  // 文件夹局部设置 (path -> description)
   folderDescriptions: Record<string, string>;
+  isLoading: boolean;
+  isInitialized: boolean;
 
   // Actions
-  setTheme: (theme: Theme) => void;
-  setLanguage: (language: Language) => void;
-  setShowHiddenFiles: (show: boolean) => void;
-  setPersonalIntro: (intro: string) => void;
-  setFolderDescription: (path: string, description: string) => void;
+  initialize: () => Promise<void>;
+  setTheme: (theme: Theme) => Promise<void>;
+  setLanguage: (language: Language) => Promise<void>;
+  setShowHiddenFiles: (show: boolean) => Promise<void>;
+  setPersonalIntro: (intro: string) => Promise<void>;
+  setFolderDescription: (path: string, description: string) => Promise<void>;
   getFolderDescription: (path: string) => string;
 }
 
-export const useSettingsStore = create<SettingsState>()(
-  persist(
-    (set, get) => ({
-      // 默认值
-      theme: 'system',
-      language: 'zh-CN',
-      showHiddenFiles: false,
-      personalIntro: '',
-      folderDescriptions: {},
+// Helper to convert backend format to frontend format
+function mapSettingsFromBackend(settings: Settings): Partial<SettingsState> {
+  return {
+    theme: settings.theme,
+    language: settings.language,
+    showHiddenFiles: settings.show_hidden_files,
+    personalIntro: settings.personal_intro,
+    folderDescriptions: settings.folder_descriptions,
+  };
+}
 
-      // Actions
-      setTheme: (theme) => set({ theme }),
-      setLanguage: (language) => set({ language }),
-      setShowHiddenFiles: (showHiddenFiles) => set({ showHiddenFiles }),
-      setPersonalIntro: (personalIntro) => set({ personalIntro }),
-      setFolderDescription: (path, description) => {
-        const { folderDescriptions } = get();
-        set({
-          folderDescriptions: {
-            ...folderDescriptions,
-            [path]: description,
-          },
-        });
-      },
-      getFolderDescription: (path) => {
-        return get().folderDescriptions[path] || '';
-      },
-    }),
-    {
-      name: 'test-fm-settings',
+// Helper to convert frontend format to backend format
+function mapSettingsToBackend(state: SettingsState): Settings {
+  return {
+    theme: state.theme,
+    language: state.language,
+    show_hidden_files: state.showHiddenFiles,
+    personal_intro: state.personalIntro,
+    folder_descriptions: state.folderDescriptions,
+  };
+}
+
+export const useSettingsStore = create<SettingsState>()((set, get) => ({
+  // Default values
+  theme: 'system',
+  language: 'zh-CN',
+  showHiddenFiles: false,
+  personalIntro: '',
+  folderDescriptions: {},
+  isLoading: true,
+  isInitialized: false,
+
+  initialize: async () => {
+    try {
+      const settings = await configService.getSettings();
+      const mapped = mapSettingsFromBackend(settings);
+      set({
+        ...mapped,
+        isLoading: false,
+        isInitialized: true,
+      });
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      set({ isLoading: false, isInitialized: true });
     }
-  )
-);
+  },
+
+  setTheme: async (theme) => {
+    const state = get();
+    const newSettings = mapSettingsToBackend({ ...state, theme });
+    await configService.updateSettings(newSettings);
+    set({ theme });
+  },
+
+  setLanguage: async (language) => {
+    const state = get();
+    const newSettings = mapSettingsToBackend({ ...state, language });
+    await configService.updateSettings(newSettings);
+    set({ language });
+  },
+
+  setShowHiddenFiles: async (showHiddenFiles) => {
+    const state = get();
+    const newSettings = mapSettingsToBackend({ ...state, showHiddenFiles });
+    await configService.updateSettings(newSettings);
+    set({ showHiddenFiles });
+  },
+
+  setPersonalIntro: async (personalIntro) => {
+    const state = get();
+    const newSettings = mapSettingsToBackend({ ...state, personalIntro });
+    await configService.updateSettings(newSettings);
+    set({ personalIntro });
+  },
+
+  setFolderDescription: async (path, description) => {
+    const state = get();
+    const newDescriptions = { ...state.folderDescriptions, [path]: description };
+    const newSettings = mapSettingsToBackend({ ...state, folderDescriptions: newDescriptions });
+    await configService.updateSettings(newSettings);
+    set({ folderDescriptions: newDescriptions });
+  },
+
+  getFolderDescription: (path) => {
+    return get().folderDescriptions[path] || '';
+  },
+}));
+
+export type { Theme, Language };
